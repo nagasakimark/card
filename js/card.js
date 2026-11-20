@@ -19,11 +19,11 @@ const COLOR = Object.fromEntries(COLORS);
 
 const TEXT = {
   ja: { title: "カードメーカー", sub: "かたちを カードに ドラッグしよう", smaller: "小さく", bigger: "大きく", turn: "まわす", del: "けす",
-        give: "This is for you!", save: "がぞうを ほぞん", clear: "ぜんぶけす", clearAsk: "ぜんぶ けしても いい？", yes: "けす", no: "やめる",
-        saved: "がぞうを ほぞんしました", lang: "English", empty: "かたちを えらんで カードに おいてね" },
+        give: "This is for you!", clear: "ぜんぶけす", clearAsk: "ぜんぶ けしても いい？", yes: "けす", no: "やめる",
+        lang: "English", empty: "かたちを えらんで カードに おいてね" },
   en: { title: "Card Maker", sub: "Drag shapes onto the card", smaller: "Smaller", bigger: "Bigger", turn: "Turn", del: "Delete",
-        give: "This is for you!", save: "Save picture", clear: "Clear all", clearAsk: "Clear the whole card?", yes: "Clear", no: "Cancel",
-        saved: "Picture saved", lang: "日本語", empty: "Pick a shape and put it on the card" },
+        give: "This is for you!", clear: "Clear all", clearAsk: "Clear the whole card?", yes: "Clear", no: "Cancel",
+        lang: "日本語", empty: "Pick a shape and put it on the card" },
 };
 let lang = (() => { try { return localStorage.getItem("card:lang") || "ja"; } catch { return "ja"; } })();
 const t = k => TEXT[lang][k];
@@ -33,7 +33,7 @@ const ICONS = {
   turn: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/>',
   trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
-  save: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
 };
 const icon = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const svgShape = (shape, fill) => `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${SHAPES[shape]}" fill="${fill}" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linejoin="round"/></svg>`;
@@ -65,10 +65,9 @@ const palette = h("div", { class: "shapes" });
 const swatches = h("div", { class: "colors" });
 const btnIcon = (name, label, fn, cls = "ib") => h("button", { class: cls, type: "button", "aria-label": label, "data-tip": label, onclick: fn, html: icon(name) });
 const selbar = h("div", { class: "selbar", hidden: true });
-const toast = h("div", { class: "toast", role: "status" });
 const confirmBox = h("div", { class: "confirm", hidden: true });
 const app = h("main", { class: "app" });
-document.body.append(app, toast);
+document.body.append(app);
 
 function render() {
   document.documentElement.lang = lang;
@@ -94,7 +93,6 @@ function render() {
     h("section", { class: "main" }, h("div", { class: "cardwrap" }, card, selbar, confirmBox), caption),
     h("footer", { class: "bar" },
       h("button", { class: "pill", type: "button", onclick: give, html: icon("star") + `<span>${t("give")}</span>` }),
-      h("button", { class: "pill ghost", type: "button", onclick: savePicture, html: icon("save") + `<span>${t("save")}</span>` }),
       h("button", { class: "pill ghost", type: "button", onclick: askClear, html: icon("trash") + `<span>${t("clear")}</span>` })));
   drawPalette();
   if (st.sel) say(st.sel); else idle();
@@ -200,40 +198,6 @@ function askClear() {
       h("button", { class: "pill ghost", type: "button", onclick: () => { confirmBox.hidden = true; } }, t("no")))));
   confirmBox.hidden = false;
 }
-function showToast(msg) {
-  toast.textContent = msg; toast.classList.add("on");
-  clearTimeout(showToast.tm); showToast.tm = setTimeout(() => toast.classList.remove("on"), 2200);
-}
-// The card as a picture (drawn again at a good size, so it's sharp)
-function savePicture() {
-  const W = 1400, H = 1000;
-  const c = document.createElement("canvas"); c.width = W; c.height = H;
-  const g = c.getContext("2d");
-  g.fillStyle = "#fffaf0"; g.fillRect(0, 0, W, H);
-  for (const [x, y, col] of [[.2, .15, "rgba(246,207,74,.15)"], [.85, .85, "rgba(240,155,176,.15)"]]) {
-    const r = g.createRadialGradient(x * W, y * H, 0, x * W, y * H, .4 * Math.hypot(W, H) / 1.4);
-    r.addColorStop(0, col); r.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = r; g.fillRect(0, 0, W, H);
-  }
-  for (const it of st.items) {
-    const w = it.size * W;
-    g.save();
-    g.translate(it.x * W, it.y * H); g.rotate(it.rot * Math.PI / 180); g.scale(w / 100, w / 100); g.translate(-50, -50);
-    const p = new Path2D(SHAPES[it.shape]);
-    g.shadowColor = "rgba(0,0,0,.2)"; g.shadowOffsetY = 3 * w / 100; g.shadowBlur = 3 * w / 100;
-    g.fillStyle = it.color[1]; g.fill(p);
-    g.shadowColor = "transparent";
-    g.strokeStyle = "rgba(0,0,0,.28)"; g.lineWidth = 3; g.lineJoin = "round"; g.stroke(p);
-    g.restore();
-  }
-  c.toBlob(blob => {
-    const a = h("a", { href: URL.createObjectURL(blob), download: "card.png" });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    showToast(t("saved"));
-  }, "image/png");
-}
-
 // ---------------------------------------------------------------- start
 render();
 try {
