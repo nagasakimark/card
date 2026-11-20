@@ -1,0 +1,10 @@
+{
+  "name": "カードメーカー Card Maker",
+  "short_name": "Card Maker",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e9f0ea",
+  "theme_color": "#e9f0ea",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
